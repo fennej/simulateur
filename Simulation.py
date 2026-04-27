@@ -20,7 +20,7 @@ def simulation_csmacd(lamda,N=10):
     """simulateur de CSMA/CD"""
 
     K = 10 #taille de la file d'attente
-
+    MAX_BACKOFF = 16 #nombre maximum de backoff avant de perdre le paquet
     t=0
     events = []
     canal_libre = True
@@ -83,7 +83,7 @@ def simulation_csmacd(lamda,N=10):
                     machine1=current_sender
                     machine2=machine
 
-                    tranmission_canselled.add(machine1)  # Ajouter la machine actuelle à l'ensemble des transmissions annulées
+                    tranmission_canselled.add(machine1)  # Ajouter la machine actuelle à l'ensemble des transmissions annulées car on avait ajoute une fin de transmission pour cette marchine et il faut pas en tenir compte
 
 
 
@@ -95,21 +95,38 @@ def simulation_csmacd(lamda,N=10):
                     if current_sender not in stations_a_backoff:  # Si la machine actuelle n'est pas déjà en backoff
                         i_machine1=i_par_station[machine1]
                         i_par_station[machine1]=i_machine1 + 1
-                        stations_a_backoff.add(machine1)  # Ajouter la machine actuelle à l'ensemble des stations en backoff
-                        heappush(events, (t + backoff(i_machine1, tau_backoff), 'sense', machine1))
 
+                        if(i_par_station[machine1] >= MAX_BACKOFF):
+                            packets_perdus += 1
+                            nb_packets_par_station[machine1] = max(0, nb_packets_par_station[machine1] - 1)  # Retirer un paquet de la station
+                            i_par_station[machine1] = 0  # Réinitialiser le compteur de backoff pour la station
 
-                    i_machine2=i_par_station[machine2]
-                    i_par_station[machine2]=i_machine2+1
-                    stations_a_backoff.add(machine2)  # Ajouter la machine qui arrive à l'ensemble des stations en backoff
+                            if(nb_packets_par_station[machine1] > 0):  # S'il reste des paquets à transmettre pour cette station
+                                heappush(events, (t + 0.005, 'sense', machine1)) # on va sense le canal si il est libre ou pas pour le prochain paquet de la station
+                        else:
+                            stations_a_backoff.add(machine1)  # Ajouter la machine actuelle à l'ensemble des stations en backoff
+                            heappush(events, (t + backoff(i_machine1, tau_backoff), 'sense', machine1))
 
 
 
                     if machine2 in stations_en_attente:
-                        stations_en_attente.remove(machine2)  # retirer cette machine si elle est impliquee dans une collision car son sense est gere par le backoff
+                        stations_en_attente.remove(machine2)  # retirer cette machine si elle est impliquee dans une collision car son sense est géré par le backoff
 
 
-                    heappush(events, (t + backoff(i_machine2, tau_backoff), 'sense', machine2))
+                    i_machine2=i_par_station[machine2]
+                    stations_a_backoff.add(machine2)  # Ajouter la machine qui arrive à l'ensemble des stations en backoff
+
+
+                    i_par_station[machine2]=i_machine2+1
+                    if(i_par_station[machine2] >= MAX_BACKOFF):
+                        packets_perdus += 1
+                        nb_packets_par_station[machine2] = max(0, nb_packets_par_station[machine2] - 1)  # Retirer un paquet de la station
+                        i_par_station[machine2] = 0  # Réinitialiser le compteur de backoff pour la station
+
+                        if(nb_packets_par_station[machine2] > 0):  # S'il reste des paquets à transmettre pour cette station
+                            heappush(events, (t + 0.005, 'sense', machine2)) # on va sense le canal si il est libre ou pas pour le prochain paquet de la station
+                    else:
+                        heappush(events, (t + backoff(i_machine2, tau_backoff), 'sense', machine2))
 
                     if(not fin_bouillage):
                         fin_bouillage = True  # Indiquer que le bouillage est en cours
