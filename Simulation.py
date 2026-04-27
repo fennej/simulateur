@@ -10,7 +10,7 @@ def duree_exp(p):
 
 def backoff(i,tau):
     """fonction de backoff exponentiel binaire"""
-    return np.random.exponential(1/(2**i * tau))
+    return np.random.exponential(2**i * tau)
 
 
 Tmax = 1000
@@ -52,7 +52,7 @@ def simulation_csmacd(lamda,N=10):
     while t<Tmax:
         n_t.append([t,packets_emis])
         clients_t.append([t,sum(nb_packets_par_station)])
-        if packets_arrives > 0:         #pour eviter la division par zero
+        if packets_arrives > 0:
             perdus_t.append([t,packets_perdus/packets_arrives])
         else:
             perdus_t.append([t,0])
@@ -181,25 +181,25 @@ if __name__ == "__main__":
     N=100
     n_t, clients_t, pertes_t = simulation_csmacd(lamda,N)
     x_values, y_values = zip(*n_t)
-    debit = [a / b if b != 0 else 0 for a, b in zip(x_values, y_values)]
+    debit = [b / a if a != 0 else 0 for a, b in zip(x_values, y_values)]
     #affichage du debit
     plt.figure()
     plt.title("nombre de paquets emis par rapport au temps")
     sns.lineplot(x=x_values, y=debit)
-    plt.savefig("pertes1.pdf")
+    plt.savefig("paquets_emis/temps.pdf")
     plt.close()
 
     # affichage du nombre de client
     plt.figure()
-    plt.title("nombre de client en attentre par rapport au temps")
+    plt.title("nombre de paquets en attentre par rapport au temps")
     x_clients, y_clients = zip(*clients_t)
     sns.lineplot(x=x_clients, y=y_clients)
-    plt.savefig("pertes2.pdf")
+    plt.savefig("paquets_en_attente/temps.pdf")
     plt.close()
 
     plt.figure()
     plt.title("taux de perte par rapport au temps")
     x_pertes, y_pertes = zip(*pertes_t)
     sns.lineplot(x=x_pertes, y=y_pertes)
-    plt.savefig("pertes3.pdf")
+    plt.savefig("paquets_perdus/temps.pdf")
     plt.close()
