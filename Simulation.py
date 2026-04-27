@@ -14,13 +14,14 @@ def backoff(i,tau):
 
 
 Tmax = 1000
+MAX_BACKOFF = 16 #nombre maximum de backoff avant de perdre le paquet
+taille_paquet=2
 
 
 def simulation_csmacd(lamda,N=10):
     """simulateur de CSMA/CD"""
 
     K = 10 #taille de la file d'attente
-    MAX_BACKOFF = 16 #nombre maximum de backoff avant de perdre le paquet
     t=0
     events = []
     canal_libre = True
@@ -74,7 +75,7 @@ def simulation_csmacd(lamda,N=10):
 
                     canal_libre = False
                     current_sender = machine
-                    heappush(events,(t + 10, 'fin_transmission', machine)) # 10 est le temps de transmission du paquet
+                    heappush(events,(t + taille_paquet, 'fin_transmission', machine)) # 10 est le temps de transmission du paquet
 
                 else:
                     # collision
@@ -189,34 +190,106 @@ def simulation_csmacd(lamda,N=10):
     return n_t, clients_t, perdus_t
 
 
+def debit_fenetre_glissante(n_t, fenetre=50):
+    """
+    Calcule le débit instantané sur une fenêtre glissante.
+    Beaucoup plus fiable que la moyenne cumulée.
+    """
+    times = [x[0] for x in n_t]
+    counts = [x[1] for x in n_t]
+    debits = []
+ 
+    for i, (t, n) in enumerate(zip(times, counts)):
+        # Trouver le premier point dans la fenêtre
+        j = i - 1
+        while j >= 0 and times[j] >= t - fenetre:
+            j -= 1
+        j += 1  # premier point dans la fenêtre
+ 
+        dt = t - times[j]
+        dn = n - counts[j]
+        if dt > 0:
+            debits.append(dn / dt)
+        else:
+            debits.append(0)
+ 
+    return times, debits
 
+
+def debit_fenetre_glissante(n_t, fenetre=50):
+    """
+    Calcule le débit instantané sur une fenêtre glissante.
+    Beaucoup plus fiable que la moyenne cumulée.
+    """
+    times = [x[0] for x in n_t]
+    counts = [x[1] for x in n_t]
+    debits = []
+
+    for i, (t, n) in enumerate(zip(times, counts)):
+        # Trouver le premier point dans la fenêtre
+        j = i - 1
+        while j >= 0 and times[j] >= t - fenetre:
+            j -= 1
+        j += 1  # premier point dans la fenêtre
+
+        dt = t - times[j]   # le temps de la fenaitre 
+        dn = n - counts[j]  #le nombre de paclets emis pendent la fenaitre 
+        if dt > 0:
+            debits.append(dn / dt)
+        else:
+            debits.append(0)
+
+    return times, debits
 
 
 if __name__ == "__main__":
-    #lamda = 0.003
     lamda = 0.1
-    N=100
-    n_t, clients_t, pertes_t = simulation_csmacd(lamda,N)
+    N = 100
+    n_t, clients_t, pertes_t = simulation_csmacd(lamda, N)
+
+    # --- Débit avec fenêtre glissante ---
+    times, debit_inst = debit_fenetre_glissante(n_t, fenetre=50)
+
+    plt.figure(figsize=(10, 4))
+    plt.title("Débit instantané (fenêtre glissante de 50 unités de temps)")
+    sns.lineplot(x=times, y=debit_inst)
+    plt.xlabel("Temps")
+    plt.ylabel("Paquets / unité de temps")
+    plt.tight_layout()
+    plt.savefig("debit_instantane.pdf")
+    plt.close()
+
+
     x_values, y_values = zip(*n_t)
     debit = [b / a if a != 0 else 0 for a, b in zip(x_values, y_values)]
     #affichage du debit
     plt.figure()
     plt.title("nombre de paquets emis par rapport au temps")
     sns.lineplot(x=x_values, y=debit)
-    plt.savefig("paquets_emis/temps.pdf")
+    plt.savefig("debit_moyen_duree.pdf")
     plt.close()
 
-    # affichage du nombre de client
-    plt.figure()
-    plt.title("nombre de paquets en attentre par rapport au temps")
+    # --- Nombre de paquets en attente ---
+    plt.figure(figsize=(10, 4))
+    plt.title("Nombre de paquets en attente par rapport au temps")
     x_clients, y_clients = zip(*clients_t)
     sns.lineplot(x=x_clients, y=y_clients)
-    plt.savefig("paquets_en_attente/temps.pdf")
+    plt.xlabel("Temps")
+    plt.ylabel("Paquets en attente")
+    plt.tight_layout()
+    plt.savefig("paquet_attebte.pdf")
     plt.close()
 
-    plt.figure()
-    plt.title("taux de perte par rapport au temps")
+    # --- Taux de perte ---
+    plt.figure(figsize=(10, 4))
+    plt.title("Taux de perte par rapport au temps")
     x_pertes, y_pertes = zip(*pertes_t)
     sns.lineplot(x=x_pertes, y=y_pertes)
-    plt.savefig("paquets_perdus/temps.pdf")
+    plt.xlabel("Temps")
+    plt.ylabel("Taux de perte")
+    plt.tight_layout()
+    plt.savefig("taux_perte.pdf")
     plt.close()
+
+    print("Simulation terminée.")
+    print(f"Débit moyen en régime permanent (t > 500) : {np.mean([d for t, d in zip(times, debit_inst) if t > 500]):.4f} paquets/unité de temps")
