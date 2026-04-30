@@ -3,6 +3,7 @@ import seaborn as sns
 import numpy as np
 import matplotlib.pyplot as plt
 from heapq import heappush, heappop
+import argparse
 
 def duree_exp(p):
     return np.random.exponential(1/p)
@@ -18,10 +19,9 @@ MAX_BACKOFF = 16 #nombre maximum de backoff avant de perdre le paquet
 taille_paquet=2
 
 
-def simulation_csmacd(lamda,N=10):
+def simulation_csmacd(lamda, N=10, Tmax=1000, MAX_BACKOFF=16, K=10, taille_paquet=2, tau_backoff=0.1):
     """simulateur de CSMA/CD"""
 
-    K = 10 #taille de la file d'attente
     t=0
     events = []
     canal_libre = True
@@ -42,8 +42,6 @@ def simulation_csmacd(lamda,N=10):
     clients_t = [] #nombre moyen de paquets en attentes à travers le temps
     perdus_t = [] #nombre de paquet perdu  travers le temps
 
-
-    tau_backoff = 0.1 #temp d'attente moyen du backoff à l'état 1
 
     for i in range(N):
         t_arrivee = duree_exp(lamda)
@@ -243,12 +241,60 @@ def debit_fenetre_glissante(n_t, fenetre=50):
 
 
 if __name__ == "__main__":
-    lamda = 0.1
-    N = 100
-    n_t, clients_t, pertes_t = simulation_csmacd(lamda, N)
+    parser = argparse.ArgumentParser(
+        description="Simulateur de CSMA/CD",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Exemples d'utilisation:
+  python Simulation.py --lamda 0.2 --N 50
+  python Simulation.py --Tmax 2000 --MAX_BACKOFF 32
+  python Simulation.py --lamda 0.15 --N 100 --tau 0.05
+        """
+    )
+    
+    parser.add_argument('--lamda', type=float, default=0.1, 
+                        help='Taux d\'arrivée des paquets (défaut: 0.1)')
+    parser.add_argument('--N', type=int, default=100, 
+                        help='Nombre de stations (défaut: 100)')
+    parser.add_argument('--Tmax', type=int, default=1000, 
+                        help='Durée maximale de la simulation (défaut: 1000)')
+    parser.add_argument('--MAX_BACKOFF', type=int, default=16, 
+                        help='Nombre maximum de backoff (défaut: 16)')
+    parser.add_argument('--K', type=int, default=10, 
+                        help='Taille de la file d\'attente (défaut: 10)')
+    parser.add_argument('--taille_paquet', type=float, default=2, 
+                        help='Taille du paquet (défaut: 2)')
+    parser.add_argument('--tau', type=float, default=0.1, 
+                        help='Temps d\'attente moyen du backoff à l\'état 1 (défaut: 0.1)')
+    parser.add_argument('--fenetre', type=int, default=50, 
+                        help='Fenêtre de temps pour le débit instantané (défaut: 50)')
+    
+    args = parser.parse_args()
+    
+    # Mise à jour des variables globales avec les arguments
+    Tmax = args.Tmax
+    MAX_BACKOFF = args.MAX_BACKOFF
+    taille_paquet = args.taille_paquet
+    
+    lamda = args.lamda
+    N = args.N
+    K = args.K
+    tau_backoff = args.tau
+    
+    print(f"Configuration de la simulation:")
+    print(f"  λ (lamda): {lamda}")
+    print(f"  N (stations): {N}")
+    print(f"  Tmax: {Tmax}")
+    print(f"  MAX_BACKOFF: {MAX_BACKOFF}")
+    print(f"  K (file): {K}")
+    print(f"  Taille paquet: {taille_paquet}")
+    print(f"  Tau backoff: {tau_backoff}")
+    print()
+    
+    n_t, clients_t, pertes_t = simulation_csmacd(lamda, N, Tmax, MAX_BACKOFF, K, taille_paquet, tau_backoff)
 
     # --- Débit avec fenêtre glissante ---
-    times, debit_inst = debit_fenetre_glissante(n_t, fenetre=50)
+    times, debit_inst = debit_fenetre_glissante(n_t, fenetre=args.fenetre)
 
     plt.figure(figsize=(10, 4))
     plt.title("Débit instantané (fenêtre glissante de 50 unités de temps)")
