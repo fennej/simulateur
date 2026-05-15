@@ -73,7 +73,7 @@ def simulation_csmacd(lamda, N=5, Tmax=1000, MAX_BACKOFF=16, K=10, taille_paquet
 
                     canal_libre = False
                     current_sender = machine
-                    heappush(events,(t + taille_paquet, 'fin_transmission', machine)) # 10 est le temps de transmission du paquet
+                    heappush(events,(t + taille_paquet, 'fin_transmission', machine)) # 1 est le temps de transmission du paquet
 
                 else:
                     # collision
@@ -138,7 +138,7 @@ def simulation_csmacd(lamda, N=5, Tmax=1000, MAX_BACKOFF=16, K=10, taille_paquet
                 canal_libre = True #le canal redevient libre après le bouillage
                 current_sender = -1 #il n y a plus de machine qui transmet
                 for station in stations_en_attente:
-                    heappush(events, (t + 0.005, 'sense', station)) # on va snese le canal pour les autres stations qui sont en attente de transmission
+                    heappush(events, (t + rd.random(), 'sense', station)) # on va snese le canal pour les autres stations qui sont en attente de transmission
 
                 stations_en_attente.clear()  # Vider l'ensemble des stations en attente après le bouillage
 
@@ -159,7 +159,7 @@ def simulation_csmacd(lamda, N=5, Tmax=1000, MAX_BACKOFF=16, K=10, taille_paquet
                         stations_en_attente.remove(machine)  # Retirer la station de l'ensemble des stations en attente
 
                     for station in stations_en_attente:
-                        heappush(events, (t + 0.005, 'sense', station)) # on va snese le canal pour les autres stations qui sont en attente de transmission
+                        heappush(events, (t + rd.random(), 'sense', station)) # on va snese le canal pour les autres stations qui sont en attente de transmission
                     stations_en_attente.clear()  # Vider l'ensemble des stations en attente après la fin de la transmission
 
                     if machine in stations_a_backoff:
@@ -178,7 +178,7 @@ def simulation_csmacd(lamda, N=5, Tmax=1000, MAX_BACKOFF=16, K=10, taille_paquet
                 heappush(events, (t + duree_exp(lamda), 'arrivee_paquet', machine))
 
                 if nb_packets_par_station[machine] == 1:  # Si la station était vide avant l'arrivée du paquet
-                    heappush(events, (t + 0.005, 'sense', machine)) #si le nombre de  pakets est egale a 1 alors on va snese le canal si il est libre ou pas
+                    heappush(events, (t + 0.05, 'sense', machine)) #si le nombre de  pakets est egale a 1 alors on va snese le canal si il est libre ou pas
 
                 if nb_packets_par_station[machine] == K+1 : #verifie si la file était pleine au moment de l'arrivé du paquet
                     #incrementer le nombre de paquet perdu
@@ -298,7 +298,7 @@ Exemples d'utilisation:
     plt.xlabel("Temps")
     plt.ylabel("Paquets en attente")
     plt.tight_layout()
-    plt.savefig("paquet_attebte.pdf")
+    plt.savefig("paquet_attente.pdf")
     plt.close()
 
     # --- Taux de perte ---
