@@ -16,10 +16,10 @@ def backoff(i,tau):
 
 Tmax = 1000
 MAX_BACKOFF = 16 #nombre maximum de backoff avant de perdre le paquet
-taille_paquet=2
+taille_paquet=1 #met une unite de temps 
 
 
-def simulation_csmacd(lamda, N=10, Tmax=1000, MAX_BACKOFF=16, K=10, taille_paquet=2, tau_backoff=0.1):
+def simulation_csmacd(lamda, N=5, Tmax=1000, MAX_BACKOFF=16, K=10, taille_paquet=1, tau_backoff=0.1):
     """simulateur de CSMA/CD"""
 
     t=0
@@ -60,7 +60,7 @@ def simulation_csmacd(lamda, N=10, Tmax=1000, MAX_BACKOFF=16, K=10, taille_paque
 
             case 'sense':
                 if canal_libre:
-                    heappush(events, (t + 0.5, 'debut_transmission', machine)) # si le canal est libre on commance a transmettre le paquet 0.05 est le temps pour commencer a transmettre le paquet
+                    heappush(events, (t + 0.001, 'debut_transmission', machine)) # si le canal est libre on commance a transmettre le paquet 0.05 est le temps pour commencer a transmettre le paquet
                 else:
                     stations_en_attente.add(machine)
 
@@ -188,31 +188,6 @@ def simulation_csmacd(lamda, N=10, Tmax=1000, MAX_BACKOFF=16, K=10, taille_paque
     return n_t, clients_t, perdus_t
 
 
-def debit_fenetre_glissante(n_t, fenetre=50):
-    """
-    Calcule le débit instantané sur une fenêtre glissante.
-    Beaucoup plus fiable que la moyenne cumulée.
-    """
-    times = [x[0] for x in n_t]
-    counts = [x[1] for x in n_t]
-    debits = []
- 
-    for i, (t, n) in enumerate(zip(times, counts)):
-        # Trouver le premier point dans la fenêtre
-        j = i - 1
-        while j >= 0 and times[j] >= t - fenetre:
-            j -= 1
-        j += 1  # premier point dans la fenêtre
- 
-        dt = t - times[j]
-        dn = n - counts[j]
-        if dt > 0:
-            debits.append(dn / dt)
-        else:
-            debits.append(0)
- 
-    return times, debits
-
 
 def debit_fenetre_glissante(n_t, fenetre=50):
     """
@@ -254,7 +229,7 @@ Exemples d'utilisation:
     
     parser.add_argument('--lamda', type=float, default=0.1, 
                         help='Taux d\'arrivée des paquets (défaut: 0.1)')
-    parser.add_argument('--N', type=int, default=100, 
+    parser.add_argument('--N', type=int, default=10, 
                         help='Nombre de stations (défaut: 100)')
     parser.add_argument('--Tmax', type=int, default=1000, 
                         help='Durée maximale de la simulation (défaut: 1000)')
@@ -262,8 +237,8 @@ Exemples d'utilisation:
                         help='Nombre maximum de backoff (défaut: 16)')
     parser.add_argument('--K', type=int, default=10, 
                         help='Taille de la file d\'attente (défaut: 10)')
-    parser.add_argument('--taille_paquet', type=float, default=2, 
-                        help='Taille du paquet (défaut: 2)')
+    parser.add_argument('--taille_paquet', type=float, default=1, 
+                        help='Taille du paquet (défaut: 1)')
     parser.add_argument('--tau', type=float, default=0.1, 
                         help='Temps d\'attente moyen du backoff à l\'état 1 (défaut: 0.1)')
     parser.add_argument('--fenetre', type=int, default=50, 
