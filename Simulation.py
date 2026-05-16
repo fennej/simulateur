@@ -271,6 +271,7 @@ Exemples d'utilisation:
     
     graphe=[]
     moyenne=0
+    np.random.seed(10) 
 
     for i in range(100):
     
