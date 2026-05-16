@@ -22,8 +22,6 @@ def backoff(i, tau):
 def simulation_aloha(lamda, N=10, Tmax=1000, K=100, tau=0.1):
     """simulateur de CSMA/CD"""
 
-    K = 100  # taille de la file d'attente
-
     t = 0
     events = []
     canal_libre = 0
@@ -137,7 +135,7 @@ Exemples d'utilisation:
         help="Taux d'arrivée des paquets (défaut: 0.1)",
     )
     parser.add_argument(
-        "--N", type=int, default=100, help="Nombre de stations (défaut: 100)"
+        "--N", type=int, default=10, help="Nombre de stations (défaut: 100)"
     )
     parser.add_argument(
         "--Tmax",
@@ -151,7 +149,7 @@ Exemples d'utilisation:
     parser.add_argument(
         "--tau",
         type=float,
-        default=2.5,
+        default=1,
         help="Temps d'attente moyen du backoff à l'état 1 (défaut: 0.1)",
     )
     parser.add_argument(
@@ -186,37 +184,40 @@ Exemples d'utilisation:
         debit = [b / a if a != 0 else 0 for a, b in zip(x_values, y_values)]
         # affichage du debit
         plt.figure()
-        plt.title("nombre de paquets emis par rapport au temps")
-        sns.lineplot(x=x_values, y=debit)
-        plt.savefig("debits.pdf")
         plt.xlabel("temps")
         plt.ylabel("paquets/temps")
+        plt.title("nombre de paquets emis par rapport au temps")
+        sns.lineplot(x=x_values, y=debit)
+        plt.savefig("aloha_debits.pdf")
         plt.close()
         print("debit final:", sum(debit[-500:]) / 500)
 
         # affichage du nombre de client
         plt.figure()
         plt.title("nombre de paquets en attentre par rapport au temps")
-        x_clients, y_clients = zip(*clients_t)
-        sns.lineplot(x=x_clients, y=y_clients)
-        plt.savefig("clients.pdf")
         plt.xlabel("temps")
         plt.ylabel("nombre de paquets")
+        plt.ylim(500, 1000)
+        x_clients, y_clients = zip(*clients_t)
+
+        sns.lineplot(x=x_clients, y=y_clients)
+        plt.savefig("aloha_paquets.pdf")
         plt.close()
 
         plt.figure()
+        plt.xlabel("temps")
+        plt.ylabel("paquets perdus")
         plt.title("taux de perte par rapport au temps")
         x_pertes, y_pertes = zip(*pertes_t)
         sns.lineplot(x=x_pertes, y=y_pertes)
-        plt.savefig("pertes.pdf")
-        plt.xlabel("temps")
-        plt.ylabel("paquets perdus")
+        plt.savefig("aloha_pertes.pdf")
         plt.close()
+        print("taux de pertes moyen final", sum(y_pertes[-500:]) / 500)
         print("Simulation terminée.")
     if args.simu == "lamda":
         values = []
         lamdas = []
-        for i in range(1, 30):
+        for i in range(15, 30):
             n_t, clients_t, pertes_t = simulation_aloha(
                 0.1 * i, N, Tmax, K, tau_backoff
             )
@@ -225,11 +226,11 @@ Exemples d'utilisation:
             values.append(sum(debit) / len(debit))
             lamdas.append(0.1 * i)
         plt.figure()
-        plt.title("debit d'émission en fonction de lambda")
-        sns.lineplot(x=lamdas, y=values, marker="o", linestyle="")
         plt.xlabel("lambda")
         plt.ylabel("debit(pquets/temps)")
-        plt.savefig("debit_lambda.pdf")
+        plt.title("debit d'émission en fonction de lambda")
+        sns.lineplot(x=lamdas, y=values, marker="o", linestyle="")
+        plt.savefig("aloha_debit_lambda.pdf")
         plt.close()
     if args.simu == "N":
         values = []
@@ -242,8 +243,8 @@ Exemples d'utilisation:
             Ns.append(i)
         plt.figure()
         plt.title("debit d'émission en fonction de N")
-        sns.lineplot(x=Ns, y=values, marker="o", linestyle="")
         plt.xlabel("N nombre de stations")
         plt.ylabel("debits(paquets/temps)")
-        plt.savefig("debit_N.pdf")
+        sns.lineplot(x=Ns, y=values, marker="o", linestyle="")
+        plt.savefig("aloha_debit_N.pdf")
         plt.close()
