@@ -41,7 +41,7 @@ def simulation_csmacd(lamda, N=5, Tmax=1000, MAX_BACKOFF=16, K=10, taille_paquet
     n_t = [] #nombre total de paquet transmis à l'instant t
     clients_t = [] #nombre moyen de paquets en attentes à travers le temps
     perdus_t = [] #nombre de paquet perdu  travers le temps
-
+    p_cumul=0 #probabilité cumulée de perte de paquet
 
     for i in range(N):
         t_arrivee = duree_exp(lamda)
@@ -49,6 +49,9 @@ def simulation_csmacd(lamda, N=5, Tmax=1000, MAX_BACKOFF=16, K=10, taille_paquet
 
 
     while t<Tmax:
+        new_t=events[0][0]
+        if(new_t > t):
+            p_cumul+=sum(nb_packets_par_station)*(new_t-t)
         n_t.append([t,packets_emis])
         clients_t.append([t,sum(nb_packets_par_station)])
         if packets_arrives > 0:
@@ -60,7 +63,7 @@ def simulation_csmacd(lamda, N=5, Tmax=1000, MAX_BACKOFF=16, K=10, taille_paquet
 
             case 'sense':
                 if canal_libre:
-                    heappush(events, (t + 0.001, 'debut_transmission', machine)) # si le canal est libre on commance a transmettre le paquet 0.05 est le temps pour commencer a transmettre le paquet
+                    heappush(events, (t + 0, 'debut_transmission', machine)) # si le canal est libre on commance a transmettre le paquet 0.05 est le temps pour commencer a transmettre le paquet
                 else:
                     stations_en_attente.add(machine)
 
@@ -101,7 +104,7 @@ def simulation_csmacd(lamda, N=5, Tmax=1000, MAX_BACKOFF=16, K=10, taille_paquet
                             i_par_station[machine1] = 0  # Réinitialiser le compteur de backoff pour la station
 
                             if(nb_packets_par_station[machine1] > 0):  # S'il reste des paquets à transmettre pour cette station
-                                heappush(events, (t + 0.005, 'sense', machine1)) # on va sense le canal si il est libre ou pas pour le prochain paquet de la station
+                                heappush(events, (t + rd.random()*0.5, 'sense', machine1)) # on va sense le canal si il est libre ou pas pour le prochain paquet de la station
                         else:
                             stations_a_backoff.add(machine1)  # Ajouter la machine actuelle à l'ensemble des stations en backoff
                             heappush(events, (t + backoff(i_machine1, tau_backoff), 'sense', machine1))
@@ -123,7 +126,7 @@ def simulation_csmacd(lamda, N=5, Tmax=1000, MAX_BACKOFF=16, K=10, taille_paquet
                         i_par_station[machine2] = 0  # Réinitialiser le compteur de backoff pour la station
 
                         if(nb_packets_par_station[machine2] > 0):  # S'il reste des paquets à transmettre pour cette station
-                            heappush(events, (t + 0.005, 'sense', machine2)) # on va sense le canal si il est libre ou pas pour le prochain paquet de la station
+                            heappush(events, (t + rd.random()*0.5, 'sense', machine2)) # on va sense le canal si il est libre ou pas pour le prochain paquet de la station
                     else:
                         heappush(events, (t + backoff(i_machine2, tau_backoff), 'sense', machine2))
 
@@ -153,7 +156,7 @@ def simulation_csmacd(lamda, N=5, Tmax=1000, MAX_BACKOFF=16, K=10, taille_paquet
 
                     nb_packets_par_station[machine] -= 1
                     if nb_packets_par_station[machine] > 0:  # S'il reste des paquets à transmettre pour cette station
-                        heappush(events, (t + 0.005, 'sense', machine)) # on va sense le canal si il est libre ou pas pour le prochain paquet de la station
+                        heappush(events, (t + 0, 'sense', machine)) # on va sense le canal si il est libre ou pas pour le prochain paquet de la station
 
                     if machine in stations_en_attente:
                         stations_en_attente.remove(machine)  # Retirer la station de l'ensemble des stations en attente
@@ -178,14 +181,14 @@ def simulation_csmacd(lamda, N=5, Tmax=1000, MAX_BACKOFF=16, K=10, taille_paquet
                 heappush(events, (t + duree_exp(lamda), 'arrivee_paquet', machine))
 
                 if nb_packets_par_station[machine] == 1:  # Si la station était vide avant l'arrivée du paquet
-                    heappush(events, (t + 0.05, 'sense', machine)) #si le nombre de  pakets est egale a 1 alors on va snese le canal si il est libre ou pas
+                    heappush(events, (t + 0, 'sense', machine)) #si le nombre de  pakets est egale a 1 alors on va snese le canal si il est libre ou pas
 
                 if nb_packets_par_station[machine] == K+1 : #verifie si la file était pleine au moment de l'arrivé du paquet
                     #incrementer le nombre de paquet perdu
                     packets_perdus += 1
                     nb_packets_par_station[machine] = K
 
-    return n_t, clients_t, perdus_t
+    return n_t, clients_t, perdus_t,p_cumul
 
 
 
@@ -229,9 +232,9 @@ Exemples d'utilisation:
     
     parser.add_argument('--lamda', type=float, default=0.1, 
                         help='Taux d\'arrivée des paquets (défaut: 0.1)')
-    parser.add_argument('--N', type=int, default=10, 
-                        help='Nombre de stations (défaut: 100)')
-    parser.add_argument('--Tmax', type=int, default=1000, 
+    parser.add_argument('--N', type=int, default=1, 
+                        help='Nombre de stations (défaut: 500)')
+    parser.add_argument('--Tmax', type=int, default=500, 
                         help='Durée maximale de la simulation (défaut: 1000)')
     parser.add_argument('--MAX_BACKOFF', type=int, default=16, 
                         help='Nombre maximum de backoff (défaut: 16)')
@@ -266,51 +269,32 @@ Exemples d'utilisation:
     print(f"  Tau backoff: {tau_backoff}")
     print()
     
-    n_t, clients_t, pertes_t = simulation_csmacd(lamda, N, Tmax, MAX_BACKOFF, K, taille_paquet, tau_backoff)
+    graphe=[]
+    moyenne=0
 
+    for i in range(100):
+    
+        n_t, clients_t, pertes_t, p_cumul = simulation_csmacd(lamda, N, Tmax, MAX_BACKOFF, K, taille_paquet, tau_backoff)
     # --- Débit avec fenêtre glissante ---
-    times, debit_inst = debit_fenetre_glissante(n_t, fenetre=args.fenetre)
+        times, debit_inst = debit_fenetre_glissante(n_t, fenetre=args.fenetre)
+        graphe.append((i, p_cumul/Tmax/lamda))
 
-    plt.figure(figsize=(10, 4))
-    plt.title("Débit instantané (fenêtre glissante de 50 unités de temps)")
-    sns.lineplot(x=times, y=debit_inst)
-    plt.xlabel("Temps")
-    plt.ylabel("Paquets / unité de temps")
+    moyenne = sum(m for _, m in graphe) / len(graphe)
+    print(f"Valeur moyenne de p_cumul / (Tmax * λ) sur 100 simulations : {moyenne:.4f}")
+    # Affichage du graphe
+    plt.figure(figsize=(10, 6))
+    iterations, metriques = zip(*graphe)
+    plt.plot(iterations, metriques, marker='o', linestyle='-', linewidth=2, markersize=8)
+    plt.xlabel('Itération')
+    plt.ylabel('p_cumul / (Tmax * λ)')
+    plt.title('Métrique de performance en fonction des itérations')
+    plt.grid(True, alpha=0.3)
     plt.tight_layout()
-    plt.savefig("debit_instantane.pdf")
-    plt.close()
+    plt.savefig("graphe_metriques.pdf")
+    plt.show()
+    
+    print("\nRésultats du graphe:")
+    for iteration, metrique in graphe:
+        print(f"  Itération {iteration}: {metrique:.4f}")
 
 
-    x_values, y_values = zip(*n_t)
-    debit = [b / a if a != 0 else 0 for a, b in zip(x_values, y_values)]
-    #affichage du debit
-    plt.figure()
-    plt.title("nombre de paquets emis par rapport au temps")
-    sns.lineplot(x=x_values, y=debit)
-    plt.savefig("debit_moyen_duree.pdf")
-    plt.close()
-
-    # --- Nombre de paquets en attente ---
-    plt.figure(figsize=(10, 4))
-    plt.title("Nombre de paquets en attente par rapport au temps")
-    x_clients, y_clients = zip(*clients_t)
-    sns.lineplot(x=x_clients, y=y_clients)
-    plt.xlabel("Temps")
-    plt.ylabel("Paquets en attente")
-    plt.tight_layout()
-    plt.savefig("paquet_attente.pdf")
-    plt.close()
-
-    # --- Taux de perte ---
-    plt.figure(figsize=(10, 4))
-    plt.title("Taux de perte par rapport au temps")
-    x_pertes, y_pertes = zip(*pertes_t)
-    sns.lineplot(x=x_pertes, y=y_pertes)
-    plt.xlabel("Temps")
-    plt.ylabel("Taux de perte")
-    plt.tight_layout()
-    plt.savefig("taux_perte.pdf")
-    plt.close()
-
-    print("Simulation terminée.")
-    print(f"Débit moyen en régime permanent (t > 500) : {np.mean([d for t, d in zip(times, debit_inst) if t > 500]):.4f} paquets/unité de temps")
