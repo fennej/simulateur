@@ -17,13 +17,11 @@ def backoff(i, tau):
 
 
 Tmax = 1000
-MAX_BACKOFF = 16  # nombre maximum de backoff avant de perdre le paquet
-taille_paquet = 2
+MAX_BACKOFF = 16 #nombre maximum de backoff avant de perdre le paquet
+taille_paquet=1 #met une unite de temps 
 
 
-def simulation_csmacd(
-    lamda, N=10, Tmax=1000, MAX_BACKOFF=16, K=10, taille_paquet=2, tau_backoff=0.1
-):
+def simulation_csmacd(lamda, N=5, Tmax=1000, MAX_BACKOFF=16, K=10, taille_paquet=1, tau_backoff=0.1):
     """simulateur de CSMA/CD"""
 
     t = 0
@@ -65,9 +63,7 @@ def simulation_csmacd(
         match event:
             case "sense":
                 if canal_libre:
-                    heappush(
-                        events, (t + 0.5, "debut_transmission", machine)
-                    )  # si le canal est libre on commance a transmettre le paquet 0.05 est le temps pour commencer a transmettre le paquet
+                    heappush(events, (t + 0.001, 'debut_transmission', machine)) # si le canal est libre on commance a transmettre le paquet 0.05 est le temps pour commencer a transmettre le paquet
                 else:
                     stations_en_attente.add(machine)
 
@@ -77,9 +73,7 @@ def simulation_csmacd(
 
                     canal_libre = False
                     current_sender = machine
-                    heappush(
-                        events, (t + taille_paquet, "fin_transmission", machine)
-                    )  # 10 est le temps de transmission du paquet
+                    heappush(events,(t + taille_paquet, 'fin_transmission', machine)) # 1 est le temps de transmission du paquet
 
                 else:
                     # collision
@@ -173,9 +167,7 @@ def simulation_csmacd(
                 canal_libre = True  # le canal redevient libre après le bouillage
                 current_sender = -1  # il n y a plus de machine qui transmet
                 for station in stations_en_attente:
-                    heappush(
-                        events, (t + 0.005, "sense", station)
-                    )  # on va snese le canal pour les autres stations qui sont en attente de transmission
+                    heappush(events, (t + rd.random(), 'sense', station)) # on va snese le canal pour les autres stations qui sont en attente de transmission
 
                 stations_en_attente.clear()  # Vider l'ensemble des stations en attente après le bouillage
 
@@ -203,9 +195,7 @@ def simulation_csmacd(
                         )  # Retirer la station de l'ensemble des stations en attente
 
                     for station in stations_en_attente:
-                        heappush(
-                            events, (t + 0.005, "sense", station)
-                        )  # on va snese le canal pour les autres stations qui sont en attente de transmission
+                        heappush(events, (t + rd.random(), 'sense', station)) # on va snese le canal pour les autres stations qui sont en attente de transmission
                     stations_en_attente.clear()  # Vider l'ensemble des stations en attente après la fin de la transmission
 
                     if machine in stations_a_backoff:
@@ -224,12 +214,8 @@ def simulation_csmacd(
                 nb_packets_par_station[machine] += 1
                 heappush(events, (t + duree_exp(lamda), "arrivee_paquet", machine))
 
-                if (
-                    nb_packets_par_station[machine] == 1
-                ):  # Si la station était vide avant l'arrivée du paquet
-                    heappush(
-                        events, (t + 0.005, "sense", machine)
-                    )  # si le nombre de  pakets est egale a 1 alors on va snese le canal si il est libre ou pas
+                if nb_packets_par_station[machine] == 1:  # Si la station était vide avant l'arrivée du paquet
+                    heappush(events, (t + 0.05, 'sense', machine)) #si le nombre de  pakets est egale a 1 alors on va snese le canal si il est libre ou pas
 
                 if (
                     nb_packets_par_station[machine] == K + 1
@@ -240,31 +226,6 @@ def simulation_csmacd(
 
     return n_t, clients_t, perdus_t
 
-
-def debit_fenetre_glissante(n_t, fenetre=50):
-    """
-    Calcule le débit instantané sur une fenêtre glissante.
-    Beaucoup plus fiable que la moyenne cumulée.
-    """
-    times = [x[0] for x in n_t]
-    counts = [x[1] for x in n_t]
-    debits = []
-
-    for i, (t, n) in enumerate(zip(times, counts)):
-        # Trouver le premier point dans la fenêtre
-        j = i - 1
-        while j >= 0 and times[j] >= t - fenetre:
-            j -= 1
-        j += 1  # premier point dans la fenêtre
-
-        dt = t - times[j]
-        dn = n - counts[j]
-        if dt > 0:
-            debits.append(dn / dt)
-        else:
-            debits.append(0)
-
-    return times, debits
 
 
 def debit_fenetre_glissante(n_t, fenetre=50):
@@ -401,7 +362,7 @@ Exemples d'utilisation:
     plt.xlabel("Temps")
     plt.ylabel("Paquets en attente")
     plt.tight_layout()
-    plt.savefig("paquet_attebte.pdf")
+    plt.savefig("paquet_attente.pdf")
     plt.close()
 
     # --- Taux de perte ---
