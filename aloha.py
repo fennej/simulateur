@@ -6,6 +6,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
 
+import IC
+
 
 def duree_exp(p):
     return np.random.exponential(1 / p)
@@ -158,7 +160,21 @@ Exemples d'utilisation:
         default=50,
         help="Fenêtre de temps pour le débit instantané (défaut: 50)",
     )
-    parser.add_argument("--simu", type=str, default="courbes", help="[courbes,lamda,N]")
+    parser.add_argument(
+        "--simu", type=str, default="courbes", help="[courbes,lamda,N,lamda_ic,N_ic]"
+    )
+    parser.add_argument(
+        "--pas",
+        type=float,
+        default=1,
+        help="donne l'ecart entre les different a valeur simuler",
+    )
+    parser.add_argument(
+        "--min", type=int, default=1, help="donne la premiere valeur a simuler"
+    )
+    parser.add_argument(
+        "--max", type=int, default=100, help="valeur de la derniere valeur a simuler"
+    )
 
     args = parser.parse_args()
 
@@ -169,6 +185,9 @@ Exemples d'utilisation:
     N = args.N
     K = args.K
     tau_backoff = args.tau
+    min = args.min
+    max = args.max
+    pas = args.pas
 
     print(f"Configuration de la simulation:")
     print(f"  λ (lamda): {lamda}")
@@ -217,14 +236,14 @@ Exemples d'utilisation:
     if args.simu == "lamda":
         values = []
         lamdas = []
-        for i in range(15, 30):
+        for i in range(min, max):
             n_t, clients_t, pertes_t = simulation_aloha(
-                0.1 * i, N, Tmax, K, tau_backoff
+                pas * i, N, Tmax, K, tau_backoff
             )
             x_values, y_values = zip(*n_t[-500:])
             debit = [b / a if a != 0 else 0 for a, b in zip(x_values, y_values)]
             values.append(sum(debit) / len(debit))
-            lamdas.append(0.1 * i)
+            lamdas.append(pas * i)
         plt.figure()
         plt.xlabel("lambda")
         plt.ylabel("debit(pquets/temps)")
@@ -232,19 +251,49 @@ Exemples d'utilisation:
         sns.lineplot(x=lamdas, y=values, marker="o", linestyle="")
         plt.savefig("aloha_debit_lambda.pdf")
         plt.close()
-    if args.simu == "N":
+    if args.simu == "N_ic":
         values = []
+        ic = []
         Ns = []
-        for i in range(1, 100):
-            n_t, clients_t, pertes_t = simulation_aloha(lamda, i, Tmax, K, tau_backoff)
-            x_values, y_values = zip(*n_t[-500:])
-            debit = [b / a if a != 0 else 0 for a, b in zip(x_values, y_values)]
-            values.append(sum(debit) / len(debit))
-            Ns.append(i)
+        for i in range(min, max):
+            n_t_test = []
+            for test in range(40):
+                n_t, _clients_t, _pertes_t = simulation_aloha(
+                    lamda, i * pas, Tmax, K, tau_backoff
+                )
+                n_t_test.append(n_t[-1][1] / n_t[-1][0])
+            # x_values, y_values = zip(*n_t[-500:])
+            # debit = [b / a if a != 0 else 0 for a, b in zip(x_values, y_values)]
+            values.append(IC.moyenne(n_t_test))
+            ic.append(IC.intervalle_confiance(n_t_test))
+            Ns.append(i * pas)
+        min_ic = list(map(lambda x: x[0], ic))
+        max_ic = list(map(lambda x: x[1], ic))
         plt.figure()
         plt.title("debit d'émission en fonction de N")
         plt.xlabel("N nombre de stations")
         plt.ylabel("debits(paquets/temps)")
-        sns.lineplot(x=Ns, y=values, marker="o", linestyle="")
+        sns.lineplot(x=Ns, y=values, marker="o", linestyle="", color="blue")
+        sns.lineplot(x=Ns, y=min_ic, marker="", linestyle="-", color="green")
+        sns.lineplot(x=Ns, y=max_ic, marker="", linestyle="-", color="red")
+        plt.savefig("aloha_debit_N.pdf")
+        plt.close()
+    if args.simu == "N":
+        values = []
+        print(f"simulation pour N de {min} à {max}")
+        Ns = []
+        for i in range(min, max):
+            n_t, _clients_t, _pertes_t = simulation_aloha(
+                lamda, i * pas, Tmax, K, tau_backoff
+            )
+            x_values, y_values = zip(*n_t[-500:])
+            debit = [b / a if a != 0 else 0 for a, b in zip(x_values, y_values)]
+            values.append(sum(debit) / len(debit))
+            Ns.append(i * pas)
+        plt.figure()
+        plt.title("debit d'émission en fonction de N")
+        plt.xlabel("N nombre de stations")
+        plt.ylabel("debits(paquets/temps)")
+        sns.lineplot(x=Ns, y=values, marker="o", linestyle="", color="blue")
         plt.savefig("aloha_debit_N.pdf")
         plt.close()
