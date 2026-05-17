@@ -44,4 +44,8 @@ Pour Afficher des valeur de N avec un intervals de confiance à 95%
 ```shell
   python Simulation.py --simu N_ic --min 80 --max 160 --pas 10
 ```
-
+##Theorie.py
+Fichier utiliser pour verifier si le debit est égal à un quand on utiliser une seule machine avec le mode CSMA\CD
+##etude_parametrique.py
+Donne les graphs pour le CSMA/CD car trop long d'utiliser le fichier Simulation.py
+permet de voir l'évolution du débit en fonction du nombre de stations, ou par rapport au parametre lambda et si nous voulions faire varier la taille des paquets
