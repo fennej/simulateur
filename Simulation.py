@@ -73,6 +73,7 @@ def simulation_csmacd(lamda, N=5, Tmax=1000, MAX_BACKOFF=16, K=10, taille_paquet
 
                     canal_libre = False
                     current_sender = machine
+                    stations_a_backoff.discard(machine)
                     heappush(events,(t + taille_paquet, 'fin_transmission', machine)) # 1 est le temps de transmission du paquet
 
                 else:
@@ -129,7 +130,7 @@ def simulation_csmacd(lamda, N=5, Tmax=1000, MAX_BACKOFF=16, K=10, taille_paquet
 
                     if(not fin_bouillage):
                         fin_bouillage = True  # Indiquer que le bouillage est en cours
-                        heappush(events, (t + 1, 'fin_bouillage', None)) # brouillage pendant 1 s
+                        heappush(events, (t + 0.05, 'fin_bouillage', None)) # brouillage pendant 1 s
 
 
             case 'fin_bouillage':
@@ -138,7 +139,7 @@ def simulation_csmacd(lamda, N=5, Tmax=1000, MAX_BACKOFF=16, K=10, taille_paquet
                 canal_libre = True #le canal redevient libre après le bouillage
                 current_sender = -1 #il n y a plus de machine qui transmet
                 for station in stations_en_attente:
-                    heappush(events, (t + rd.random(), 'sense', station)) # on va snese le canal pour les autres stations qui sont en attente de transmission
+                    heappush(events, (t + rd.random()*2, 'sense', station)) # on va snese le canal pour les autres stations qui sont en attente de transmission
 
                 stations_en_attente.clear()  # Vider l'ensemble des stations en attente après le bouillage
 
@@ -159,7 +160,7 @@ def simulation_csmacd(lamda, N=5, Tmax=1000, MAX_BACKOFF=16, K=10, taille_paquet
                         stations_en_attente.remove(machine)  # Retirer la station de l'ensemble des stations en attente
 
                     for station in stations_en_attente:
-                        heappush(events, (t + rd.random(), 'sense', station)) # on va snese le canal pour les autres stations qui sont en attente de transmission
+                        heappush(events, (t + rd.random()*2, 'sense', station)) # on va snese le canal pour les autres stations qui sont en attente de transmission
                     stations_en_attente.clear()  # Vider l'ensemble des stations en attente après la fin de la transmission
 
                     if machine in stations_a_backoff:
