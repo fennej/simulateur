@@ -1,5 +1,5 @@
 # Projet de SImulation
-## aloha.p
+## aloha.py
 cette partie simule le projet sans aucun ajout par rapport au sujet
 ### utilisation
 Pour lancer une simulation en specifiant des paramètres(si un paramtre n'est pas specifier utilise des valeur par defaut)  
